@@ -1,0 +1,4 @@
+*.o
+.*.swp
+sessionvim
+test_executable
