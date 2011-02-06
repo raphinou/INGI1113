@@ -5,26 +5,34 @@
 
 // to be written
 str_buf * str_buf_alloc(size_t size) {
-	str_buf* buf = (str_buf *) calloc(size,sizeof(str_buf));
-	(*buf).string = (char *) calloc(size, sizeof(char));
-	(*buf).len = 0;
-	(*buf).size = size;
-	return buf;
+    str_buf* buf;
+	if ((buf = (str_buf *) calloc(size,sizeof(str_buf))) && 	((*buf).string = (char *) calloc(size, sizeof(char)))) {
+		(*buf).len = 0;
+		(*buf).size = size;
+		return buf;
+	}
+	else {
+		return NULL;
+	}
 }
 
 str_buf * str_buf_alloc_str(const char * str){
 	int len = strlen(str);
-	str_buf * res = str_buf_alloc(len);
-	(*res).len=len;
-	return res;
+	str_buf * buf = str_buf_alloc(len);
+	(*buf).len=len;
+	for (int i = 0; i<len; i++) {
+		((*buf).string)[i]=str[i];
+		//*buf++; *str++;
+	}
+	return buf;
 }
 
 str_buf * str_buf_alloc_substr(const char * str, size_t str_len){
 	str_buf * buf = str_buf_alloc(str_len);
 	for (int i = 0; i<str_len; i++) {
 		((*buf).string)[i]=str[i];
-		//*buf++; *str++;
 	}
+	(*buf).len = str_len;
 	return buf;
 }
 

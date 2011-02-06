@@ -3,11 +3,11 @@ TEST_FILES = testing.c
 CC_FLAGS =  -Wall -Werror -std=c99
 #build: test_executable str_buf.o 
 
-#str_buf.o: 
-#	gcc $(CC_FLAGS) -o str_buf.o $(FILES)
-test_executable:
-	gcc $(CC_FLAGS) -o test_executable $(FILES) $(TEST_FILES)
-tests:
+build: str_buf.o
+	gcc $(CC_FLAGS) -o test_executable  $(TEST_FILES) str_buf.o
+str_buf.o: 
+	gcc $(CC_FLAGS) -o str_buf.o -c $(FILES)
+tests: build
 	./test_executable
 clean:
-	rm test_executable
+	rm -f test_executable str_buf.o
