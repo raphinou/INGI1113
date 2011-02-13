@@ -106,7 +106,7 @@ generate_passwords_list(const char *file, const char* prefix, const char *alphab
 		printf("Password for %s is: %s\n", file, current_password);
 		printf("*****************************************************************\n");
 		found = 1;
-		return;
+		_exit(0);
 	}
 	/*
 	printf("after call to test_password %s, alphabet=%s \n", current_password, alphabet);
