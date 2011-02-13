@@ -77,13 +77,30 @@ void
 }
 
 void  
-generate_passwords_list(const char* prefix, const char *alphabet, int max_length)
+generate_passwords_list(const char *file, const char* prefix, const char *alphabet, int max_length)
 {
 	int i, alphabet_length = strlen(alphabet), prefix_length = strlen(prefix);
 	char *current_password;
-	char * character_added=malloc(sizeof(char));
+	char * character_added=malloc(sizeof(char)*2);
+	/*
+	printf("prefix received= %s\n", prefix);
+	*/
+	/* test password here */
 	current_password=malloc(sizeof(char)*(prefix_length+1));
-	printf("- %s\n", prefix);
+	strcpy(current_password,prefix);
+	/*
+	printf("before call to test_password %s\n", current_password);
+	*/
+	if(unrar_test_password(file, current_password) == 0) {
+		printf("*****************************************************************\n");
+		printf("Password is: %s\n", current_password);
+		printf("*****************************************************************\n");
+		return;
+	}
+	/*
+	printf("after call to test_password %s, alphabet=%s \n", current_password, alphabet);
+	*/
+
 	if (prefix_length==max_length)
 	{
 		return;
@@ -98,46 +115,54 @@ generate_passwords_list(const char* prefix, const char *alphabet, int max_length
 			printf("current_password: %s\n", current_password);
 			*/
 			*character_added=*(alphabet+i);
+			*(character_added+1)='\0';
 			/*
 			printf("character added = %s\n", character_added);
 			*/
 			strcat(current_password, character_added);
 			/*
-			printf("- %s\n",current_password);
+			printf("prefix passed to call: %s\n",current_password);
 			*/
-			generate_passwords_list(current_password, alphabet, max_length);
+			generate_passwords_list(file, current_password, alphabet, max_length);
 		}
 	}
+	free(current_password);
+	free(character_added);
 }
 
 void
-generate_passwords(const char *start_letters, const char * alphabet, int max_length)
+generate_passwords(const char * file, const char *start_letters, const char * alphabet, int max_length)
 {
 /*	int i, j, k, start_letters_length;
  *	*/
 	int i,start_letters_length, alphabet_length;
 	char * start_letter=malloc(sizeof(char));
-	start_letter=malloc(sizeof(char));
+	start_letter=malloc(sizeof(char)*2);
+	/*
 	printf("start of passwords generation\n");
 	printf("start letters:%s\n", start_letters);
+	*/
 	start_letters_length = strlen(start_letters);
 	alphabet_length = strlen(alphabet);
+	/*
 	printf("start_letter_length = %i\n", start_letters_length);
+	*/
 	for(i=0; i<start_letters_length;i++)
 	{
 		/*
 		printf("start letter: %c\n", start_letters[i]);
 		*/
 		*start_letter=*(start_letters+i);
-		generate_passwords_list(start_letter, alphabet, max_length);
-		printf("**************************************\n");
+		*(start_letter+1)='\0';
+		generate_passwords_list(file, start_letter, alphabet, max_length);
 	}
+	free(start_letter);
 }
 			
 int 
 main (int argc, char const * argv[])
 {
-    int i, thread_status;
+    int thread_status, i;
 	pthread_t threads[2];
 /*    
     if (argc < 2) {
@@ -145,10 +170,10 @@ main (int argc, char const * argv[])
         return 1;
     }
 */    
-	char  s1[]="abc",s2[]="def",alphabet[]="abcdef";
-	generate_passwords(s1, alphabet, 3);
+	char  s1[]="a",s2[]="m",alphabet[]="ami";
+	generate_passwords(argv[1], s1, alphabet, 3);
+	generate_passwords(argv[1], s2, alphabet, 1);
 	
-	printf("%s,%s,%s", s1,s2,alphabet);
 	thread_status = pthread_create(&threads[0], NULL, test, NULL);
     for (i = 2; i <= argc; i++) {
         if(unrar_test_password(argv[1], argv[i]) == 0) {
