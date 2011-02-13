@@ -76,48 +76,58 @@ void
 	pthread_exit(NULL);
 }
 
-node * 
-generate_passwords_list(node * list_head, const char* prefix, alphabet, max_length)
+void  
+generate_passwords_list(const char* prefix, const char *alphabet, int max_length)
 {
-	int i, alphabet_length = strlen(alphabet);
-	node * head=list_head;
-	char * curent_password;
-	if (strlen(prefix==max_length))
+	int i, alphabet_length = strlen(alphabet), prefix_length = strlen(prefix);
+	char current_password[max_length];
+	printf("prefix: %s\n", prefix);
+	if (prefix_length==max_length)
 	{
-		return list_head;
+		return;
 	}
 	else
 	{
 		/* 2 loops to first add short passwords to the list, then add their children passwords */
 		for(i=0; i< alphabet_length; i++)
 		{
-			current_password = strcat(prefix, alphabet[i]);
-			head=(node *)malloc(sizeof(node));
-			head.password=current_password;
-			head.next = NULL;
+			strcpy(current_password,prefix);
+			current_password[prefix_length+1]=alphabet[i] ;
+			current_password[prefix_length+2]='\0';
+			printf("- %s\n",current_password);
+			/*
+			generate_passwords_list(current_password, alphabet, max_length);
+			*/
 		}
+		/*
 		for(i=0; i< alphabet_length; i++)
 		{
 			current_password = prefix + alphabet[i];
 			head = generate_passwords_list(head, current_password, alphabet, max_length);
 		}
+		*/
 	}
 }
 
 void
-generate_passwords(node* list_head, const char *start_letters, const char * alphabet, int max_length)
+generate_passwords(const char *start_letters, const char * alphabet, int max_length)
 {
 /*	int i, j, k, start_letters_length;
  *	*/
-	int i,j,start_letters_length, alphabet_length;
-	node * head=list_head;
+	int i,start_letters_length, alphabet_length;
+	char * start_letter=malloc(sizeof(char));
+	start_letter=malloc(sizeof(char));
 	printf("start of passwords generation\n");
+	printf("start letters:%s\n", start_letters);
 	start_letters_length = strlen(start_letters);
-	alphabet_length = strlen(alphabet):
+	alphabet_length = strlen(alphabet);
 	printf("start_letter_length = %i\n", start_letters_length);
 	for(i=0; i<start_letters_length;i++)
 	{
-		head = generate_passwords_list(head, head->password, alphabet, max_length);
+		printf("start letter: %c\n", start_letters[i]);
+		*start_letter=*(start_letters+i);
+		generate_passwords_list(start_letter, alphabet, max_length);
+		printf("**************************************");
 	}
 }
 			
