@@ -4,6 +4,7 @@
 #include <strings.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 
 struct thread_params {
 	char * file;
@@ -90,10 +91,7 @@ generate_passwords_list(const char *file, const char* prefix, const char *alphab
 	int i, alphabet_length = strlen(alphabet), prefix_length = strlen(prefix);
 	char *current_password;
 	char * character_added=malloc(sizeof(char)*2);
-	/*
 	printf("prefix received= %s\n", prefix);
-	*/
-	/* test password here */
 	current_password=malloc(sizeof(char)*(prefix_length+1));
 	strcpy(current_password,prefix);
 	
@@ -105,7 +103,7 @@ generate_passwords_list(const char *file, const char* prefix, const char *alphab
 	
 	if(unrar_test_password(file, current_password) == 0) {
 		printf("*****************************************************************\n");
-		printf("Password is: %s\n", current_password);
+		printf("Password for %s is: %s\n", file, current_password);
 		printf("*****************************************************************\n");
 		found = 1;
 		return;
@@ -159,7 +157,7 @@ void
 	int max_length = args->max_length;
 
 	int i,start_letters_length, alphabet_length;
-	char * start_letter=malloc(sizeof(char));
+	char * start_letter;
 	start_letter=malloc(sizeof(char)*2);
 	/*
 	printf("start letters:%s\n", start_letters);
@@ -189,38 +187,104 @@ void
 int 
 main (int argc, char const * argv[])
 {
-    int thread_status, thread_join_res;
-	pthread_t threads[2];
+    int thread_status, thread_join_res, thread_number, i, j,c ;
+	pthread_t *threads;
+	char * file;
+
+    while ((c = getopt (argc, argv, "t:")) != -1)
+	{
+		switch (c)
+		{
+			case 't':
+				thread_number=atoi(optarg);
+				break;
+			default:
+				abort();
+		}
+	}
+
+
+	if (optind >= argc) 
+	{
+		usage();
+        printf ("non-option ARGV-elements: ");
+    }
+	else
+	{
+            file =  argv[optind];
+			printf("file = %s", file);
+	}
+
+
+	char * starts[thread_number];
+	threads = malloc(sizeof(threads)*thread_number);
 /*    
     if (argc < 2) {
         usage();
         return 1;
     }
 */    
-	char  s1[]="abcdef",s2[]="ghijklm",alphabet[]="abcdefghijklm";
+	char  s1[]="abcdef",s2[]="ghijklm",alphabet[]="abcdefghijklmnopqrstuvwxyz";
+	char * current_letter = malloc(sizeof(char)*2);
+	struct thread_params *params;
+	params = malloc(sizeof(*params)*thread_number);
+	for (i=0; i<thread_number; i++)
+	{
+		starts[i]=malloc(sizeof(char)*(26/thread_number+2));
+		*starts[i]='\0';
+	}
+	for (i=0; i<26; i++)
+	{
+		j=i%thread_number;
+		/* FIXME: better solution here? */
+		current_letter[0] = *(alphabet+i);
+		current_letter[1] = '\0';
+		starts[i%thread_number]=strcat(starts[i%thread_number],current_letter );
+	}
+	for (i=0; i<thread_number; i++)
+	{
+		printf("start for thread %i : %s\n", i, starts[i]);
+		params[i].file =  file;
+		params[i].start_letters = starts[i];
+		params[i].alphabet = alphabet;
+		params[i].max_length = 3;
+	}
+	/*
 	struct thread_params p1;
-	/* CHECKME */
 	p1.file = (char *) (argv[1]);
     p1.start_letters = s1;
 	p1.alphabet = alphabet;
     p1.max_length =	3;
 
 	struct thread_params p2;
-	/* CHECKME */
 	p2.file = (char *) argv[2];
     p2.start_letters = s2;
 	p2.alphabet = alphabet;
     p2.max_length =	3;
+	*/
+
 	/*
 	generate_passwords(argv[1], s1, alphabet, 3);
 	generate_passwords(argv[1], s2, alphabet, 1);
 	*/
+	for (i=0; i< thread_number; i++)
+	{
+		thread_status = pthread_create(&threads[i], NULL, generate_passwords, &(params[i]));
+	}
+	/*
 	thread_status = pthread_create(&threads[0], NULL, generate_passwords, &p1);
-
 	thread_status = pthread_create(&threads[1], NULL, generate_passwords, &p2);
+	*/
+
+	for (i=0; i< thread_number; i++)
+	{
+		thread_join_res = pthread_join(threads[i], NULL);
+	}
+	
+	/*
 	thread_join_res = pthread_join(threads[0], NULL);
 	thread_join_res = pthread_join(threads[1], NULL);
-	
+	*/
 	/*
 	thread_status = pthread_create(&threads[0], NULL, test, NULL);
 	*/
