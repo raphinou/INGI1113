@@ -5,10 +5,14 @@
 #include <string.h>
 #include <stdio.h>
 
-struct node{
-	char * password;
-	struct node *next;
+struct thread_params {
+	char * file;
+	char * start_letters;
+	char * alphabet;
+	int max_length;
 };
+
+int found = 0;
 
 static int 
 _unrar_test_password_callback(unsigned int msg, long data, long P1, long P2)
@@ -79,6 +83,10 @@ void
 void  
 generate_passwords_list(const char *file, const char* prefix, const char *alphabet, int max_length)
 {
+    if (found == 1) 
+	{
+	  return;
+	}	
 	int i, alphabet_length = strlen(alphabet), prefix_length = strlen(prefix);
 	char *current_password;
 	char * character_added=malloc(sizeof(char)*2);
@@ -88,13 +96,18 @@ generate_passwords_list(const char *file, const char* prefix, const char *alphab
 	/* test password here */
 	current_password=malloc(sizeof(char)*(prefix_length+1));
 	strcpy(current_password,prefix);
+	
 	/*
 	printf("before call to test_password %s\n", current_password);
+	printf("before call to test_password alphabet = %s\n", alphabet);
+	printf("before call to test_password alphabet length= %i\n", alphabet_length);
 	*/
+	
 	if(unrar_test_password(file, current_password) == 0) {
 		printf("*****************************************************************\n");
 		printf("Password is: %s\n", current_password);
 		printf("*****************************************************************\n");
+		found = 1;
 		return;
 	}
 	/*
@@ -103,6 +116,9 @@ generate_passwords_list(const char *file, const char* prefix, const char *alphab
 
 	if (prefix_length==max_length)
 	{
+		/*
+		printf("Got to maximum length, stopping\n");
+		*/
 		return;
 	}
 	else
@@ -131,16 +147,25 @@ generate_passwords_list(const char *file, const char* prefix, const char *alphab
 }
 
 void
-generate_passwords(const char * file, const char *start_letters, const char * alphabet, int max_length)
+*generate_passwords(void * arg)
 {
 /*	int i, j, k, start_letters_length;
  *	*/
+	printf("starting thread for passwords generation\n");
+	struct thread_params* args = (struct thread_params*)arg;
+	char * file = args->file;
+	char * start_letters = args->start_letters;
+	char * alphabet = args->alphabet;
+	int max_length = args->max_length;
+
 	int i,start_letters_length, alphabet_length;
 	char * start_letter=malloc(sizeof(char));
 	start_letter=malloc(sizeof(char)*2);
 	/*
-	printf("start of passwords generation\n");
 	printf("start letters:%s\n", start_letters);
+	printf("file:%s\n", file);
+	printf("alphabet:%s\n", alphabet);
+	printf("max_length:%i\n", max_length);
 	*/
 	start_letters_length = strlen(start_letters);
 	alphabet_length = strlen(alphabet);
@@ -154,15 +179,17 @@ generate_passwords(const char * file, const char *start_letters, const char * al
 		*/
 		*start_letter=*(start_letters+i);
 		*(start_letter+1)='\0';
+ 		printf("will call generate_passwords_list with prefix %s\n", start_letter);
 		generate_passwords_list(file, start_letter, alphabet, max_length);
 	}
 	free(start_letter);
+	pthread_exit(NULL);
 }
 			
 int 
 main (int argc, char const * argv[])
 {
-    int thread_status, i;
+    int thread_status, thread_join_res;
 	pthread_t threads[2];
 /*    
     if (argc < 2) {
@@ -170,20 +197,43 @@ main (int argc, char const * argv[])
         return 1;
     }
 */    
-	char  s1[]="a",s2[]="m",alphabet[]="ami";
+	char  s1[]="abcdef",s2[]="ghijklm",alphabet[]="abcdefghijklm";
+	struct thread_params p1;
+	/* CHECKME */
+	p1.file = (char *) (argv[1]);
+    p1.start_letters = s1;
+	p1.alphabet = alphabet;
+    p1.max_length =	3;
+
+	struct thread_params p2;
+	/* CHECKME */
+	p2.file = (char *) argv[2];
+    p2.start_letters = s2;
+	p2.alphabet = alphabet;
+    p2.max_length =	3;
+	/*
 	generate_passwords(argv[1], s1, alphabet, 3);
 	generate_passwords(argv[1], s2, alphabet, 1);
+	*/
+	thread_status = pthread_create(&threads[0], NULL, generate_passwords, &p1);
+
+	thread_status = pthread_create(&threads[1], NULL, generate_passwords, &p2);
+	thread_join_res = pthread_join(threads[0], NULL);
+	thread_join_res = pthread_join(threads[1], NULL);
 	
+	/*
 	thread_status = pthread_create(&threads[0], NULL, test, NULL);
+	*/
+	/*
     for (i = 2; i <= argc; i++) {
         if(unrar_test_password(argv[1], argv[i]) == 0) {
             printf("Password is: %s\n", argv[i]);
             goto finish;
         }
     }
+	*/
 
-    printf("Password not found\n");
+    if (found ==0)
+	    printf("Password not found\n");
     
-finish:    
-    return 0;
 }

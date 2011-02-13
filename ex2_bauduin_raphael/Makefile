@@ -1,4 +1,5 @@
 CFLAGS+=-Wall -Werror -ansi -pedantic -std=c99
+#CFLAGS+=-Wall -std=c99
 LDFLAGS+=-lunrar -L. -lpthread
 EXEC=rarcrack
 SOURCES=$(wildcard *.c)
