@@ -80,8 +80,10 @@ void
 generate_passwords_list(const char* prefix, const char *alphabet, int max_length)
 {
 	int i, alphabet_length = strlen(alphabet), prefix_length = strlen(prefix);
-	char current_password[max_length];
-	printf("prefix: %s\n", prefix);
+	char *current_password;
+	char * character_added=malloc(sizeof(char));
+	current_password=malloc(sizeof(char)*(prefix_length+1));
+	printf("- %s\n", prefix);
 	if (prefix_length==max_length)
 	{
 		return;
@@ -92,20 +94,19 @@ generate_passwords_list(const char* prefix, const char *alphabet, int max_length
 		for(i=0; i< alphabet_length; i++)
 		{
 			strcpy(current_password,prefix);
-			current_password[prefix_length+1]=alphabet[i] ;
-			current_password[prefix_length+2]='\0';
-			printf("- %s\n",current_password);
 			/*
-			generate_passwords_list(current_password, alphabet, max_length);
+			printf("current_password: %s\n", current_password);
 			*/
+			*character_added=*(alphabet+i);
+			/*
+			printf("character added = %s\n", character_added);
+			*/
+			strcat(current_password, character_added);
+			/*
+			printf("- %s\n",current_password);
+			*/
+			generate_passwords_list(current_password, alphabet, max_length);
 		}
-		/*
-		for(i=0; i< alphabet_length; i++)
-		{
-			current_password = prefix + alphabet[i];
-			head = generate_passwords_list(head, current_password, alphabet, max_length);
-		}
-		*/
 	}
 }
 
@@ -124,10 +125,12 @@ generate_passwords(const char *start_letters, const char * alphabet, int max_len
 	printf("start_letter_length = %i\n", start_letters_length);
 	for(i=0; i<start_letters_length;i++)
 	{
+		/*
 		printf("start letter: %c\n", start_letters[i]);
+		*/
 		*start_letter=*(start_letters+i);
 		generate_passwords_list(start_letter, alphabet, max_length);
-		printf("**************************************");
+		printf("**************************************\n");
 	}
 }
 			
@@ -143,7 +146,7 @@ main (int argc, char const * argv[])
     }
 */    
 	char  s1[]="abc",s2[]="def",alphabet[]="abcdef";
-	generate_passwords(s1, alphabet, 2);
+	generate_passwords(s1, alphabet, 3);
 	
 	printf("%s,%s,%s", s1,s2,alphabet);
 	thread_status = pthread_create(&threads[0], NULL, test, NULL);
