@@ -13,7 +13,7 @@ struct thread_params {
 	int max_length;
 };
 
-int found = 0, g_count = 0;
+int found = 0;
 
 static int 
 _unrar_test_password_callback(unsigned int msg, long data, long P1, long P2)
@@ -231,12 +231,12 @@ main (int argc, char const * argv[])
 	char  alphabet[]="abcdefghijklmnopqrstuvwxyz";
 	char * current_letter = malloc(sizeof(char)*2);
 	struct thread_params *params;
-	params = malloc(sizeof(*params)*thread_number);
+	params = malloc(sizeof(*params)*thread_number*process_number);
 	for (i=0; i<thread_number*process_number; i++)
 	{
 		/* dirty code: +2 for possible rounding + \0
 		 */
-		starts[i]=malloc(sizeof(char)*(26/thread_number*(process_number)+2));
+		starts[i]=malloc(sizeof(char)*((26/(thread_number*process_number))+2));
 		*starts[i]='\0';
 	}
 	for (i=0; i<26; i++)
@@ -245,15 +245,21 @@ main (int argc, char const * argv[])
 		/* FIXME: better solution here? */
 		current_letter[0] = *(alphabet+i);
 		current_letter[1] = '\0';
-		starts[i%(thread_number*process_number)]=strcat(starts[i%(thread_number*process_number)],current_letter );
+		starts[j]=strcat(starts[j],current_letter );
 	}
 	for (i=0; i<thread_number*process_number; i++)
 	{
 		printf("start for thread %i : %s\n", i, starts[i]);
 		params[i].file =  file;
 		params[i].start_letters = starts[i];
+		printf("start for thread %i : %s\n", i, starts[i]);
+		printf("params start for thread %i : %s\n", i,params[i].start_letters);
 		params[i].alphabet = alphabet;
 		params[i].max_length = 3;
+	}
+	for (i=0; i<thread_number*process_number; i++)
+	{
+		printf("from params: start for thread %i : %s\n", i, params[i].start_letters);
 	}
 	/*
 	struct thread_params p1;
@@ -273,18 +279,39 @@ main (int argc, char const * argv[])
 	generate_passwords(argv[1], s1, alphabet, 3);
 	generate_passwords(argv[1], s2, alphabet, 1);
 	*/
-	for (i=0; i<process_number; i++)
+	int first = 1;
+	for (i=0; i<process_number-1; i++)
 	{
-		printf("creating process %i\n", i);
-		process_count++;
-		g_count++;
-		pid_t pid = fork();
+		if (first ==1 || pid==0) {
+			first=0;
+			/*
+			printf("creating process %i\n", i);
+			*/
+			pid = fork();
+			process_count++;
+		}
+		else
+		{
+			first=0;
+			/*
+			printf("for loop %i in pid %i\n", i,pid);
+			*/
+		}
 	}
-	printf("for process with pid=%i we have the process_count = %i and g_count=%i\n", pid, process_count, g_count);
-	exit(3);
+	if (pid==0)
+	{
+		process_count=0;
+	}
+	/*
+	printf("for process with pid=%i we have the process_count = %i\n", pid, process_count);
+	*/
+
 	for (i=0; i< thread_number; i++)
 	{
-		thread_status = pthread_create(&threads[i], NULL, generate_passwords, &(params[i]));
+		/* each process launches the threads with their own params */
+		printf("launching thread number %i for process %i working on params %i because process_cound = %i\n", i, pid, i+(process_count*thread_number), process_count);
+		printf("start letters %i are %s\n", pid, params[i+(process_count*thread_number)].start_letters);
+		thread_status = pthread_create(&threads[i], NULL, generate_passwords, &(params[i+(process_count*thread_number)]));
 	}
 	/*
 	thread_status = pthread_create(&threads[0], NULL, generate_passwords, &p1);
