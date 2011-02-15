@@ -71,26 +71,23 @@ error:
 void
 usage(void)
 {
-    printf("rarcrack RAR_FILE [PASSWORD ...]\n");
+    printf("rarcrack -t number_of_threads_per_process -p number_of_processes RAR_FILE \n");
 }
 
-void
-*test()
-{
-	printf("in test function");
-	pthread_exit(NULL);
-}
 
 void  
 generate_passwords_list(const char *file, const char* prefix, const char *alphabet, int max_length)
 {
+	/* recursively generates all passwords starting with prefix up to max_length characters length
+	 * */
+	int i, alphabet_length = strlen(alphabet), prefix_length = strlen(prefix);
+	char *current_password;
+	char * character_added;
     if (found == 1) 
 	{
 	  return;
 	}	
-	int i, alphabet_length = strlen(alphabet), prefix_length = strlen(prefix);
-	char *current_password;
-	char * character_added=malloc(sizeof(char)*2);
+	character_added=malloc(sizeof(char)*2);
 	printf("prefix received= %s\n", prefix);
 	current_password=malloc(sizeof(char)*(prefix_length+1));
 	strcpy(current_password,prefix);
@@ -147,9 +144,8 @@ generate_passwords_list(const char *file, const char* prefix, const char *alphab
 void
 *generate_passwords(void * arg)
 {
-/*	int i, j, k, start_letters_length;
- *	*/
-	printf("starting thread for passwords generation\n");
+	/* Start the generation of passwords starting with the letters in args->start_letters 
+	 * */
 	struct thread_params* args = (struct thread_params*)arg;
 	char * file = args->file;
 	char * start_letters = args->start_letters;
@@ -159,6 +155,7 @@ void
 	int i,start_letters_length, alphabet_length;
 	char * start_letter;
 	start_letter=malloc(sizeof(char)*2);
+	printf("starting thread for passwords generation\n");
 	/*
 	printf("start letters:%s\n", start_letters);
 	printf("file:%s\n", file);
@@ -192,7 +189,7 @@ main (int argc, char const * argv[])
 	char * file;
 	pid_t pid;
 
-    while ((c = getopt (argc, argv, "t:p:")) != -1)
+    while ((c = getopt (argc, (char * const*) argv, "t:p:")) != -1)
 	{
 		switch (c)
 		{
@@ -215,30 +212,29 @@ main (int argc, char const * argv[])
     }
 	else
 	{
-            file =  argv[optind];
+            file =  (char *) argv[optind];
 			printf("file = %s", file);
 	}
 
 
 	char * starts[thread_number*process_number];
 	threads = malloc(sizeof(threads)*thread_number);
-/*    
-    if (argc < 2) {
-        usage();
-        return 1;
-    }
-*/    
 	char  alphabet[]="abcdefghijklmnopqrstuvwxyz";
 	char * current_letter = malloc(sizeof(char)*2);
 	struct thread_params *params;
 	params = malloc(sizeof(*params)*thread_number*process_number);
+
+	/* split alphabet in the right number of groups (maximum 26) 
+	 * ----------------------------------------------------------*/
+	/* allocate memory */
 	for (i=0; i<thread_number*process_number; i++)
 	{
-		/* dirty code: +2 for possible rounding + \0
+		/* FIXME: dirty code: +2 for possible rounding + \0
 		 */
 		starts[i]=malloc(sizeof(char)*((26/(thread_number*process_number))+2));
 		*starts[i]='\0';
 	}
+	/* set start letter for each group */
 	for (i=0; i<26; i++)
 	{
 		j=i%(thread_number*process_number);
@@ -247,6 +243,7 @@ main (int argc, char const * argv[])
 		current_letter[1] = '\0';
 		starts[j]=strcat(starts[j],current_letter );
 	}
+	/* create params for threads */
 	for (i=0; i<thread_number*process_number; i++)
 	{
 		printf("start for thread %i : %s\n", i, starts[i]);
@@ -257,45 +254,20 @@ main (int argc, char const * argv[])
 		params[i].alphabet = alphabet;
 		params[i].max_length = 3;
 	}
-	for (i=0; i<thread_number*process_number; i++)
-	{
-		printf("from params: start for thread %i : %s\n", i, params[i].start_letters);
-	}
-	/*
-	struct thread_params p1;
-	p1.file = (char *) (argv[1]);
-    p1.start_letters = s1;
-	p1.alphabet = alphabet;
-    p1.max_length =	3;
-
-	struct thread_params p2;
-	p2.file = (char *) argv[2];
-    p2.start_letters = s2;
-	p2.alphabet = alphabet;
-    p2.max_length =	3;
-	*/
-
-	/*
-	generate_passwords(argv[1], s1, alphabet, 3);
-	generate_passwords(argv[1], s2, alphabet, 1);
-	*/
 	int first = 1;
+
+	/* create processes 
+	 * ------------------*/
 	for (i=0; i<process_number-1; i++)
 	{
 		if (first ==1 || pid==0) {
 			first=0;
-			/*
-			printf("creating process %i\n", i);
-			*/
 			pid = fork();
 			process_count++;
 		}
 		else
 		{
 			first=0;
-			/*
-			printf("for loop %i in pid %i\n", i,pid);
-			*/
 		}
 	}
 	if (pid==0)
@@ -306,6 +278,8 @@ main (int argc, char const * argv[])
 	printf("for process with pid=%i we have the process_count = %i\n", pid, process_count);
 	*/
 
+	/* create threads in each process 
+	 * ------------------------------*/
 	for (i=0; i< thread_number; i++)
 	{
 		/* each process launches the threads with their own params */
@@ -313,33 +287,15 @@ main (int argc, char const * argv[])
 		printf("start letters %i are %s\n", pid, params[i+(process_count*thread_number)].start_letters);
 		thread_status = pthread_create(&threads[i], NULL, generate_passwords, &(params[i+(process_count*thread_number)]));
 	}
-	/*
-	thread_status = pthread_create(&threads[0], NULL, generate_passwords, &p1);
-	thread_status = pthread_create(&threads[1], NULL, generate_passwords, &p2);
-	*/
 
+	/* join threads */
 	for (i=0; i< thread_number; i++)
 	{
 		thread_join_res = pthread_join(threads[i], NULL);
 	}
 	
-	/*
-	thread_join_res = pthread_join(threads[0], NULL);
-	thread_join_res = pthread_join(threads[1], NULL);
-	*/
-	/*
-	thread_status = pthread_create(&threads[0], NULL, test, NULL);
-	*/
-	/*
-    for (i = 2; i <= argc; i++) {
-        if(unrar_test_password(argv[1], argv[i]) == 0) {
-            printf("Password is: %s\n", argv[i]);
-            goto finish;
-        }
-    }
-	*/
 
     if (found ==0)
 	    printf("Password not found\n");
-    
+    return 0; 
 }

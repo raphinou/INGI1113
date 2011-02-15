@@ -1,0 +1,7 @@
+probleme de compilation avec 
+  -ansi: ‘pid_t’ undeclared (bizarre, car le prog fonctionne correctement si compilé sans ansi)
+  -pedantic: ISO C90 forbids variable length array
+probleme de fonctionnement:
+  - lorsqu'un process trouve le mot de passe, il ne stoppe pas les autres process
+  - la long max des mot de passes générés est  hard-codée à trois caractères
+nombre de thread * nombre de process doit etre au maximum 26 car partition des mots de passe sur la premiere lettre.

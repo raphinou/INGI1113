@@ -1,6 +1,6 @@
 #no -std=c99 for usint getopt: https://bugzilla.redhat.com/show_bug.cgi?id=130815
-#CFLAGS+=-Wall -Werror -ansi -pedantic -std=c99
-CFLAGS+=-Wall
+#CFLAGS+=-Wall -Werror -ansi -pedantic
+CFLAGS+=-Wall -Werror
 LDFLAGS+=-lunrar -L. -lpthread
 EXEC=rarcrack
 SOURCES=$(wildcard *.c)
