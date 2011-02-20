@@ -10,7 +10,8 @@ $(EXEC): $(OBJECTS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-
+bnd_buf_testing: $(OBJECTS)
+	$(CC) $(CFLAGS) -o bnd_buf_testing bnd_buf_testing.c bnd_buf.o
 .PHONY: clean mrproper
 
 clean:
