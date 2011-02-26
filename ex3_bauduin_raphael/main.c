@@ -110,6 +110,7 @@ void
         }
 		sem_post(&mutex);
 		sem_post(&free_slots);
+		free(password);
 	}
 	printf("READER %i finished\n", args->number);
 	pthread_exit(NULL);
