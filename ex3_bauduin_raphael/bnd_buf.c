@@ -25,7 +25,7 @@ bnd_buf_alloc(int size)
 	 */
 	bnd_buf * buffer;
 	buffer=malloc(sizeof(bnd_buf));
-	buffer->array = malloc((size+1)*sizeof(char *));
+	buffer->array = malloc((size)*sizeof(char *));
 	buffer->size = size;
 	buffer->elements=0;
 	buffer->first = 0;

@@ -58,25 +58,71 @@ test_bnd_buf_get()
 	bnd_buf * buffer = get_test_buffer();
 	assert(bnd_buf_free_slots(buffer)==0);
 	assert(bnd_buf_items_count(buffer)==2);
+
 	s=bnd_buf_get(buffer);
-	printf("passord: %s\n",s);
 	assert(strcmp(s,"new password")==0);
 	assert(bnd_buf_free_slots(buffer)==1);
+
 	ret = bnd_buf_put(buffer,"third password");
 	assert(ret==1);
+	
 	s=bnd_buf_get(buffer);
 	assert(strcmp(s,"second password")==0);
 	assert(bnd_buf_free_slots(buffer)==1);
 	assert(bnd_buf_items_count(buffer)==1);
+	
 	s=bnd_buf_get(buffer);
 	assert(strcmp(s,"third password")==0);
 	assert(bnd_buf_free_slots(buffer)==2);
 	assert(bnd_buf_items_count(buffer)==0);
-
-
 }
 
+void
+test_bnd_buf_rotation()
+{
+	int ret;
+	char * s;
+	bnd_buf * buffer = get_test_buffer();
+	assert(bnd_buf_free_slots(buffer)==0);
+	assert(bnd_buf_items_count(buffer)==2);
 
+	/* put in full buffer */
+	ret = bnd_buf_put(buffer,"third password");
+	assert(ret==0);
+
+	s=bnd_buf_get(buffer);
+	printf("passord: %s\n",s);
+	assert(strcmp(s,"new password")==0);
+	assert(bnd_buf_free_slots(buffer)==1);
+
+	/* put in buffer with free place */
+	ret = bnd_buf_put(buffer,"third password");
+	assert(ret==1);
+	/* put in full buffer */
+	ret = bnd_buf_put(buffer,"fourth password");
+	assert(ret==0);
+
+
+	s=bnd_buf_get(buffer);
+	assert(strcmp(s,"second password")==0);
+	assert(bnd_buf_free_slots(buffer)==1);
+	assert(bnd_buf_items_count(buffer)==1);
+	/* put in buffer with free place */
+	ret = bnd_buf_put(buffer,"fourth password");
+	assert(ret==1);
+
+
+	s=bnd_buf_get(buffer);
+	assert(strcmp(s,"third password")==0);
+	assert(bnd_buf_free_slots(buffer)==1);
+	assert(bnd_buf_items_count(buffer)==1);
+
+	s=bnd_buf_get(buffer);
+	assert(strcmp(s,"fourth password")==0);
+	assert(bnd_buf_free_slots(buffer)==2);
+	assert(bnd_buf_items_count(buffer)==0);
+
+}
 
 int 
 main(int argc, char **argv)
@@ -84,6 +130,7 @@ main(int argc, char **argv)
 	test_bnd_buf_alloc();
 	test_bnd_buf_put();
 	test_bnd_buf_get();
+	test_bnd_buf_rotation();
 	printf("Tests have succeeded\n");
 	return 0;
 }
