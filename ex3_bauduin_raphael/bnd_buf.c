@@ -62,7 +62,7 @@ bnd_buf_put(bnd_buf *buffer, char * s)
 	}
 	printf("buffer NOT full, putting %s\n",s);
 	buffer->array[buffer->last]=s;
-	buffer->last++;
+	buffer->last=(buffer->last+1)%(buffer->size);
 	buffer->elements++;
 	printf("after putting, first= %i, last= %i and elements=%i\n", buffer->first, buffer->last, buffer->elements);
 	printf("first element = %s\n", buffer->array[buffer->first]);
@@ -77,7 +77,7 @@ bnd_buf_get(bnd_buf * buffer){
 	if (buffer->elements == 0)
 		return NULL;
 	s=buffer->array[buffer->first];
-	buffer->first++;
+	buffer->first=(buffer->first+1)%(buffer->size);
 	buffer->elements--;
 	return s;
 }
