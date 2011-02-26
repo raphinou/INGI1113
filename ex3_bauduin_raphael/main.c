@@ -1,7 +1,22 @@
 #include <string.h>
 #include <stdio.h>
+#include <bnd_buf.h>
+#include <semaphore.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 #include "zip_crack.h"
+
+#define BND_BUF_SIZE 5
+
+/* number of free slots */
+sem_t free_slots;
+/* number of slots filled */
+sem_t filled_slots;
+/* mutex */
+sem_t mutex;
+
 
 void
 usage (void)
@@ -28,7 +43,7 @@ read_word(FILE * fp, char * password )
 	return 1;
 }
 void
-read_dico(char * file) 
+read_dico(char * file, bnd_buf * buffer) 
 /* opens file path passed in parameter, and reads it line per line 
  * each password should be maximum 29 characters long */
 {
@@ -37,8 +52,33 @@ read_dico(char * file)
 	char password[30]="";
 	fp=fopen(file, "r");
 	while (counter++<20 && read_word(fp, password))
-		printf("PASSSWORD READ is %s\n", password);
+	{
+		sem_wait(&free_slots);
+		sem_wait(&mutex);
+		bnd_buf_put(buffer,password);
+		printf("PRODUCER put %s\n", password);
+		sem_post(&mutex);
+		sem_post(&filled_slots);
+	}
 
+}
+
+void 
+* read_buffer(void * arguments)
+{
+	char *password;
+	bnd_buf * buffer;
+    buffer	= (bnd_buf *) arguments;
+	while (1) 
+	{
+		sleep(2);
+		sem_wait(&filled_slots);
+		sem_wait(&mutex);
+		password = bnd_buf_get(buffer);
+		printf("\t\tREADER got %s \n", password);
+		sem_post(&mutex);
+		sem_post(&free_slots);
+	}
 }
 
 int 
@@ -46,8 +86,22 @@ main (int argc, char const * argv[])
 {
     int i;
     struct zip_archive * archive;
+	bnd_buf * buffer;
+	int thread_status;
+   	pthread_t * thread=malloc(sizeof(pthread_t));;
+	/* number of free slots */
+	sem_init(&free_slots, 0, BND_BUF_SIZE);
+	/* number of slots filled */
+	sem_init(&filled_slots, 0, 0);
+	/* mutex initialisation */
+	sem_init(&mutex, 0, 1);
 
-	read_dico("dico.txt");
+	buffer = bnd_buf_alloc(BND_BUF_SIZE);
+
+	/* producer */
+	thread_status = pthread_create(thread, NULL, read_buffer, buffer );
+	read_dico("dico.txt", buffer);
+	pthread_join(*thread, NULL);
 
     if (argc < 2) {
         usage();

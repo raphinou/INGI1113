@@ -1,4 +1,5 @@
 CFLAGS+=-Wall -Werror -ansi -pedantic -I.
+LDFLAGS+=-lpthread
 EXEC=zipcrack
 SOURCES=$(wildcard *.c)
 OBJECTS=$(SOURCES:.c=.o)

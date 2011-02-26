@@ -1,6 +1,7 @@
 #include "bnd_buf.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 /*
  * size is the usable size of the buffer, ie size of the arry-1
@@ -24,8 +25,13 @@ bnd_buf_alloc(int size)
 	 * full one)
 	 */
 	bnd_buf * buffer;
+	int i;
 	buffer=malloc(sizeof(bnd_buf));
 	buffer->array = malloc((size)*sizeof(char *));
+	for (i=0; i<size; i++) 
+	{
+		buffer->array[i]=malloc(50*sizeof(char));
+	}
 	buffer->size = size;
 	buffer->elements=0;
 	buffer->first = 0;
@@ -58,7 +64,7 @@ bnd_buf_put(bnd_buf *buffer, char * s)
 	{
 		return 0;
 	}
-	buffer->array[buffer->last]=s;
+	strcpy(buffer->array[buffer->last], s);
 	buffer->last=(buffer->last+1)%(buffer->size);
 	buffer->elements++;
 	return 1;
@@ -66,12 +72,13 @@ bnd_buf_put(bnd_buf *buffer, char * s)
 
 char *
 bnd_buf_get(bnd_buf * buffer){
-	char * s;
+	char * s=malloc(sizeof(char)*50);
 	/* QUESTION: good idea to return a NULL pointer when no item available?
 	 * */
 	if (buffer->elements == 0)
 		return NULL;
-	s=buffer->array[buffer->first];
+	
+	strcpy(s,buffer->array[buffer->first]);
 	buffer->first=(buffer->first+1)%(buffer->size);
 	buffer->elements--;
 	return s;
