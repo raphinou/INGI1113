@@ -1,4 +1,4 @@
-CFLAGS+=-Wall -Werror -ansi -pedantic
+CFLAGS+=-Wall -Werror -ansi -pedantic -I.
 EXEC=zipcrack
 SOURCES=$(wildcard *.c)
 OBJECTS=$(SOURCES:.c=.o)
@@ -11,7 +11,7 @@ $(EXEC): $(OBJECTS)
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 bnd_buf_testing: $(OBJECTS)
-	$(CC) $(CFLAGS) -o bnd_buf_testing bnd_buf_testing.c bnd_buf.o
+	$(CC) $(CFLAGS) -o bnd_buf_testing tests/bnd_buf_testing.c bnd_buf.o
 .PHONY: clean mrproper
 
 clean:

@@ -1,4 +1,4 @@
-#include "bnd_buf.h"
+#include <bnd_buf.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -91,7 +91,6 @@ test_bnd_buf_rotation()
 	assert(ret==0);
 
 	s=bnd_buf_get(buffer);
-	printf("passord: %s\n",s);
 	assert(strcmp(s,"new password")==0);
 	assert(bnd_buf_free_slots(buffer)==1);
 

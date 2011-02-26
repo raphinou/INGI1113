@@ -46,7 +46,6 @@ bnd_buf_free(bnd_buf * buffer)
 		*/
 	}
 	/* free the array */
-	printf("freeing array\n");
 	free(buffer->array);
 	/* free the buffer */
 	free(buffer);
@@ -57,15 +56,11 @@ bnd_buf_put(bnd_buf *buffer, char * s)
 {
 	if (bnd_buf_free_slots(buffer)==0)
 	{
-		printf("buffer full, not putting\n");
 		return 0;
 	}
-	printf("buffer NOT full, putting %s\n",s);
 	buffer->array[buffer->last]=s;
 	buffer->last=(buffer->last+1)%(buffer->size);
 	buffer->elements++;
-	printf("after putting, first= %i, last= %i and elements=%i\n", buffer->first, buffer->last, buffer->elements);
-	printf("first element = %s\n", buffer->array[buffer->first]);
 	return 1;
 }
 
