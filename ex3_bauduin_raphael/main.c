@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <getopt.h>
 
 #include "zip_crack.h"
 
@@ -117,12 +118,32 @@ void
 int 
 main (int argc, char const * argv[])
 {
-    int i;
+    int i, c;
     struct zip_archive * archive;
 	struct consumer_params *params;
 	bnd_buf * buffer;
 	int thread_status, thread_number = 3;
    	pthread_t * threads;
+
+	/* read parameters passed as arguments */
+    while ((c = getopt (argc, (char * const*) argv, "t:p:")) != -1)
+	{
+		switch (c)
+		{
+			case 't':
+				thread_number=atoi(optarg);
+				break;
+				/*
+			case 'p':
+				process_number=atoi(optarg);
+				break;
+				*/
+			default:
+				abort();
+		}
+	}
+
+
 	threads = malloc(thread_number * sizeof(pthread_t));;
 	params = malloc(thread_number * sizeof(struct consumer_params));
 	/* number of free slots */
@@ -134,7 +155,7 @@ main (int argc, char const * argv[])
 
 	buffer = bnd_buf_alloc(BND_BUF_SIZE);
 
-    if ( (archive = zip_load_archive(argv[1])) == NULL) {
+    if ( (archive = zip_load_archive(argv[optind])) == NULL) {
         printf("Unable to open archive %s\n", argv[1]);
         return 2;
     }
