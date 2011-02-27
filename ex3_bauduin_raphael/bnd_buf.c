@@ -49,10 +49,15 @@ bnd_buf_alloc(int size, int shared)
 			return NULL;
 		}
 
+		/* QUESTION: using the key SHM_BUF_ARRAY_ID causes the error invalid argument
+		 * seems this is because there's not enough memory available for the call?
+		 * This works though with IPC_PRIVATE, but need to be run as root (???)
 		shmid=shmget(SHM_BUF_ARRAY_ID, size*sizeof(char *), IPC_CREAT);
+		 */ 
+		shmid=shmget(IPC_PRIVATE, size*sizeof(char *), IPC_CREAT);
 		if (shmid==-1)
 		{
-			printf("ERROR on shmid");
+			printf("ERROR on shmid BND_BUF_ARRAY: %s\n", strerror(errno));
 			return NULL;
 		}
 		printf("shpmid = %i\n", shmid);
@@ -98,21 +103,36 @@ bnd_buf_alloc(int size, int shared)
 }
 
 void 
-bnd_buf_free(bnd_buf * buffer)
+bnd_buf_free(bnd_buf * buffer, int shared)
 {
 	/* free stored strings memory */
-	int i;
-	for (i=buffer->first; i<buffer->last; i++)
+	int i, shmid;
+	if (shared>0)
 	{
-		/* FIXME: BOUM! 
-		printf("freeing array element %i\n", i);
-		free(*(buffer->array[i]));
-		*/
+		for (i=0; i<buffer->size; i++) 
+		{
+			shmid = shmdt(buffer->array[i]);
+			shmctl(shmid, IPC_RMID,0);
+		}
+		shmid = shmdt(buffer->array);
+		shmctl(shmid, IPC_RMID,0);
+		shmid = shmdt(buffer);
+		shmctl(shmid, IPC_RMID,0);
 	}
-	/* free the array */
-	free(buffer->array);
-	/* free the buffer */
-	free(buffer);
+	else
+	{
+		for (i=buffer->first; i<buffer->last; i++)
+		{
+			/* FIXME: BOUM! 
+			 */
+			printf("freeing array element %i\n", i);
+			free((buffer->array[i]));
+		}
+		/* free the array */
+		free(buffer->array);
+		/* free the buffer */
+		free(buffer);
+	}
 }
 
 int 

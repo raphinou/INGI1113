@@ -15,7 +15,7 @@ bnd_buf_alloc(int size, int shared);
  * Frees the memory used by a buffer 
  * */
 void
-bnd_buf_free(bnd_buf * buffer);
+bnd_buf_free(bnd_buf * buffer, int shared);
 
 /*
  * Put a string in the bounded buffer.

@@ -28,7 +28,7 @@ test_bnd_buf_alloc()
 	buffer = bnd_buf_alloc(5);
 	assert(bnd_buf_size(buffer)==5);
 	assert(bnd_buf_free_slots(buffer)==5);
-	bnd_buf_free(buffer);
+	bnd_buf_free(buffer,0);
 }
 
 void
@@ -47,7 +47,7 @@ test_bnd_buf_put()
 	assert(bnd_buf_free_slots(buffer)==0);
 	assert(ret==0);
 	/* FIXME: bnd_buf_free problem occurs in this call */
-	bnd_buf_free(buffer);
+	bnd_buf_free(buffer,0);
 }
 
 void 

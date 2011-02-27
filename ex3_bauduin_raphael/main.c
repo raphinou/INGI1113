@@ -14,7 +14,6 @@
 
 #include "zip_crack.h"
 
-#define BND_BUF_SIZE 5
 
 /* number of free slots */
 sem_t *free_slots;
@@ -35,7 +34,7 @@ struct consumer_params {
 void
 usage (void)
 {
-    printf("zipcrack ZIP_FILE [PASSWORD1 [PASSWORD2 ...]]\n");
+    printf("zipcrack [-b buffer_size] [-t thread_number (>0) | -p children_process_number (>=0) ]  ZIP_FILE\n");
 }
 
 int
@@ -158,15 +157,20 @@ main (int argc, char const * argv[])
     struct zip_archive * archive;
 	struct consumer_params *params;
 	bnd_buf * buffer;
-	int thread_status, thread_number = 3, process_number=1;
+	int thread_status, thread_number = 1, process_number=1;
+	int buffer_size = 5;
 	int status; /* for wait */
 	int free_slots_value;
 	int shmid;
-
    	pthread_t * threads;
 
+    if (argc < 2) {
+        usage();
+        return 1;
+    }
+
 	/* read parameters passed as arguments */
-    while ((c = getopt (argc, (char * const*) argv, "t:p:")) != -1)
+    while ((c = getopt (argc, (char * const*) argv, "t:p:b:")) != -1)
 	{
 		switch (c)
 		{
@@ -176,13 +180,17 @@ main (int argc, char const * argv[])
 			case 'p':
 				process_number=atoi(optarg);
 				break;
+			case 'b':
+				buffer_size=atoi(optarg);
+				break;
 			default:
 				abort();
 		}
 	}
 
 
-	buffer = bnd_buf_alloc(BND_BUF_SIZE, process_number-1);
+	printf("initialisaing buffer with size %i\n", buffer_size);
+	buffer = bnd_buf_alloc(buffer_size, process_number-1);
 
     if ( (archive = zip_load_archive(argv[optind])) == NULL) {
         printf("Unable to open archive %s\n", argv[1]);
@@ -197,21 +205,21 @@ main (int argc, char const * argv[])
 
 		/*free_slots = malloc(sizeof(sem_t *));
 		 */
-		shmid = shmget(IPC_PRIVATE,sizeof(sem_t *),0777|IPC_CREAT);
+		shmid = shmget(IPC_PRIVATE,sizeof(sem_t ),0777|IPC_CREAT);
 		free_slots=(sem_t *)shmat(shmid, NULL, 0);
-		sem_init(free_slots, process_number-1, BND_BUF_SIZE);
+		sem_init(free_slots, process_number-1, buffer_size);
 		/* number of slots filled */
 		/*
 		filled_slots = malloc(sizeof(sem_t *));
 		*/
-		shmid = shmget(IPC_PRIVATE,sizeof(sem_t *),0777|IPC_CREAT);
+		shmid = shmget(IPC_PRIVATE,sizeof(sem_t ),0777|IPC_CREAT);
 		filled_slots=(sem_t *)shmat(shmid, NULL, 0);
 		sem_init(filled_slots, process_number-1, 0);
 		/* mutex initialisation */
 		/*
 		mutex = malloc(sizeof(sem_t *));
 		*/
-		shmid = shmget(IPC_PRIVATE,sizeof(sem_t *),0777|IPC_CREAT);
+		shmid = shmget(IPC_PRIVATE,sizeof(sem_t ),0777|IPC_CREAT);
 		mutex=(sem_t *)shmat(shmid, NULL, 0);
 		sem_init(mutex, process_number-1, 1);
 
@@ -248,6 +256,24 @@ main (int argc, char const * argv[])
 			read_buffer(buffer,pid,archive);
 
 		}
+		/* FIXME : BOUM !
+		 */
+		/*
+		shmid = shmdt(found);
+		shmctl(shmid, IPC_RMID,0);
+		*/
+		shmid = shmdt(free_slots);
+		/*
+		  shmctl(shmid, IPC_RMID,0);
+		 * */
+		shmid = shmdt(filled_slots);
+		/*
+		shmctl(shmid, IPC_RMID,0);
+		*/
+		shmid = shmdt(mutex);
+		/*
+		shmctl(shmid, IPC_RMID,0);
+		*/
 	}
 	else
 	{
@@ -255,13 +281,13 @@ main (int argc, char const * argv[])
 		*found = 0;
 		/* initialise semaphores shared by threads */
 		/* number of free slots */
-		free_slots = malloc(sizeof(sem_t *));
-		sem_init(free_slots, process_number-1, BND_BUF_SIZE);
+		free_slots = malloc(sizeof(sem_t ));
+		sem_init(free_slots, process_number-1, buffer_size);
 		/* number of slots filled */
-		filled_slots = malloc(sizeof(sem_t *));
+		filled_slots = malloc(sizeof(sem_t ));
 		sem_init(filled_slots, process_number-1, 0);
 		/* mutex initialisation */
-		mutex = malloc(sizeof(sem_t *));
+		mutex = malloc(sizeof(sem_t ));
 		sem_init(mutex, process_number-1, 1);
 
 		threads = malloc(thread_number * sizeof(pthread_t));;
@@ -282,14 +308,14 @@ main (int argc, char const * argv[])
 		{
 			pthread_join(threads[i], NULL);
 		}
+		free(free_slots);
+		free(filled_slots);
+		free(mutex);
 	}
-    if (argc < 2) {
-        usage();
-        return 1;
-    }
 
     printf("Password found. %i\n", *found);
 
     zip_close_archive(archive);
+	bnd_buf_free(buffer, process_number-1);
     return 0;
 }
