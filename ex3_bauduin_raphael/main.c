@@ -16,11 +16,11 @@
 #define BND_BUF_SIZE 5
 
 /* number of free slots */
-sem_t free_slots;
+sem_t *free_slots;
 /* number of slots filled */
-sem_t filled_slots;
+sem_t *filled_slots;
 /* mutex */
-sem_t mutex;
+sem_t *mutex;
 int found = 0;
 int reader_finished = 0;
 struct consumer_params {
@@ -65,16 +65,16 @@ read_dico(char * file, bnd_buf * buffer, int threads)
 	fp=fopen(file, "r");
 	while (found==0 && read_word(fp, password))
 	{
-		sem_wait(&free_slots);
-		sem_wait(&mutex);
+		sem_wait(free_slots);
+		sem_wait(mutex);
 		bnd_buf_put(buffer,password);
 		printf("PRODUCER put %s\n", password);
-		sem_post(&mutex);
-		sem_post(&filled_slots);
+		sem_post(mutex);
+		sem_post(filled_slots);
 	}
 	reader_finished = 1;
 	/* increment filled_slots once more to unlock wating readers */
-	sem_post(&filled_slots);
+	sem_post(filled_slots);
 	printf("PRODUCER: finished\n");
 	if (threads>0)
 	{
@@ -91,18 +91,18 @@ read_buffer(bnd_buf * buffer, int number, struct zip_archive *archive)
 	while (!found) 
 	{
 		printf("Reader %i will wait on filled slots\n", number);
-		sem_wait(&filled_slots);
+		sem_wait(filled_slots);
 		printf("Reader %i done wait on filled slots\n", number);
 		printf("Reader %i will wait on mutex\n", number);
-		sem_wait(&mutex);
+		sem_wait(mutex);
 		printf("Reader %i done wait on mutex\n", number);
 		printf("Reader %i will work\n", number);
 		if (found || reader_finished)
 		{
 			/* free mutex and activate possible waiting readers */
-			sem_post(&mutex);
+			sem_post(mutex);
 			if (reader_finished)
-				sem_post(&filled_slots);
+				sem_post(filled_slots);
 			printf("READER %i finished\n", number);
 			return;
 		}
@@ -114,8 +114,8 @@ read_buffer(bnd_buf * buffer, int number, struct zip_archive *archive)
 			found = 1;
             printf("Password found by %i is: %s\n", number, password);
         }
-		sem_post(&mutex);
-		sem_post(&free_slots);
+		sem_post(mutex);
+		sem_post(free_slots);
 		free(password);
 	}
 	printf("READER %i finished\n", number);
@@ -168,11 +168,11 @@ main (int argc, char const * argv[])
 	if (process_number>1) {
 		/* initialise semaphores shared by processes */
 		/* number of free slots */
-		sem_init(&free_slots, process_number-1, BND_BUF_SIZE);
+		sem_init(free_slots, process_number-1, BND_BUF_SIZE);
 		/* number of slots filled */
-		sem_init(&filled_slots, process_number-1, 0);
+		sem_init(filled_slots, process_number-1, 0);
 		/* mutex initialisation */
-		sem_init(&mutex, process_number-1, 1);
+		sem_init(mutex, process_number-1, 1);
 		for (i=0; i<process_number; i++)
 		{
 			if (pid==0)
@@ -199,11 +199,14 @@ main (int argc, char const * argv[])
 	{
 		/* initialise semaphores shared by threads */
 		/* number of free slots */
-		sem_init(&free_slots, process_number-1, BND_BUF_SIZE);
+		free_slots = malloc(sizeof(sem_t *));
+		sem_init(free_slots, process_number-1, BND_BUF_SIZE);
 		/* number of slots filled */
-		sem_init(&filled_slots, process_number-1, 0);
+		filled_slots = malloc(sizeof(sem_t *));
+		sem_init(filled_slots, process_number-1, 0);
 		/* mutex initialisation */
-		sem_init(&mutex, process_number-1, 1);
+		mutex = malloc(sizeof(sem_t *));
+		sem_init(mutex, process_number-1, 1);
 
 		threads = malloc(thread_number * sizeof(pthread_t));;
 		params = malloc(thread_number * sizeof(struct consumer_params));
