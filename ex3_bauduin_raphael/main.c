@@ -10,6 +10,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/wait.h>
+#include <fcntl.h> /* For the O_ constants, flag passed to sem_open */
 
 #include "zip_crack.h"
 
@@ -21,7 +22,7 @@ sem_t *free_slots;
 sem_t *filled_slots;
 /* mutex */
 sem_t *mutex;
-int found = 0;
+int *found;
 int reader_finished = 0;
 struct consumer_params {
 	bnd_buf *buffer;
@@ -61,14 +62,28 @@ read_dico(char * file, bnd_buf * buffer, int threads)
  * each password should be maximum 29 characters long */
 {
 	FILE * fp;
+	int free_slots_value;
 	char password[30]="";
 	fp=fopen(file, "r");
-	while (found==0 && read_word(fp, password))
+	while (*found==0 && read_word(fp, password))
 	{
+		sem_getvalue(free_slots, &free_slots_value);
+		/*
+		printf("Producer will wait on free slots, %i \n", free_slots_value);
+		*/
 		sem_wait(free_slots);
+		/*
+		printf("Producer done wait on free slots\n");
+		printf("Producer will wait on mutex\n");
+		*/
 		sem_wait(mutex);
+		/*
+		printf("Producer done wait on mutex\n");
+		*/
 		bnd_buf_put(buffer,password);
+		/*
 		printf("PRODUCER put %s\n", password);
+		*/
 		sem_post(mutex);
 		sem_post(filled_slots);
 	}
@@ -88,16 +103,22 @@ read_buffer(bnd_buf * buffer, int number, struct zip_archive *archive)
 {
 	char *password;
 	printf("Reader %i starting\n", number);
-	while (!found) 
+	while (!*found) 
 	{
+		/*
 		printf("Reader %i will wait on filled slots\n", number);
+		*/
 		sem_wait(filled_slots);
+		/*
 		printf("Reader %i done wait on filled slots\n", number);
 		printf("Reader %i will wait on mutex\n", number);
+		*/
 		sem_wait(mutex);
+		/*
 		printf("Reader %i done wait on mutex\n", number);
 		printf("Reader %i will work\n", number);
-		if (found || reader_finished)
+		*/
+		if (*found || reader_finished)
 		{
 			/* free mutex and activate possible waiting readers */
 			sem_post(mutex);
@@ -111,7 +132,7 @@ read_buffer(bnd_buf * buffer, int number, struct zip_archive *archive)
 		printf("\t\tREADER %i got %s \n", args->number, password);
 		*/
         if(zip_test_password(archive, password) == 0) {
-			found = 1;
+			*found = 1;
             printf("Password found by %i is: %s\n", number, password);
         }
 		sem_post(mutex);
@@ -139,6 +160,8 @@ main (int argc, char const * argv[])
 	bnd_buf * buffer;
 	int thread_status, thread_number = 3, process_number=1;
 	int status; /* for wait */
+	int free_slots_value;
+	int shmid;
 
    	pthread_t * threads;
 
@@ -166,13 +189,35 @@ main (int argc, char const * argv[])
         return 2;
     }
 	if (process_number>1) {
-		/* initialise semaphores shared by processes */
+		shmid=shmget(IPC_PRIVATE, sizeof(int), 0777|IPC_CREAT);
+		found = (int *) shmat(shmid, NULL,0);
+		*found = 0;
+		/* initialise semaphores shared by threads */
 		/* number of free slots */
+
+		/*free_slots = malloc(sizeof(sem_t *));
+		 */
+		shmid = shmget(IPC_PRIVATE,sizeof(sem_t *),0777|IPC_CREAT);
+		free_slots=(sem_t *)shmat(shmid, NULL, 0);
 		sem_init(free_slots, process_number-1, BND_BUF_SIZE);
 		/* number of slots filled */
+		/*
+		filled_slots = malloc(sizeof(sem_t *));
+		*/
+		shmid = shmget(IPC_PRIVATE,sizeof(sem_t *),0777|IPC_CREAT);
+		filled_slots=(sem_t *)shmat(shmid, NULL, 0);
 		sem_init(filled_slots, process_number-1, 0);
 		/* mutex initialisation */
+		/*
+		mutex = malloc(sizeof(sem_t *));
+		*/
+		shmid = shmget(IPC_PRIVATE,sizeof(sem_t *),0777|IPC_CREAT);
+		mutex=(sem_t *)shmat(shmid, NULL, 0);
 		sem_init(mutex, process_number-1, 1);
+
+		sem_getvalue(free_slots, &free_slots_value);
+		printf("free_slots semaphore initialised with value %i \n", free_slots_value);
+
 		for (i=0; i<process_number; i++)
 		{
 			if (pid==0)
@@ -181,13 +226,22 @@ main (int argc, char const * argv[])
 			}
 
 		}
+		/* initialise semaphores */
+		/*name semaphores */
+		/*
+		free_slots = sem_open("/free_slots", O_CREAT, 0666, BND_BUF_SIZE);
+		sem_getvalue(free_slots, &free_slots_value);
+		printf("/free_slots semaphore initialised with value %i \n", free_slots_value);
+		filled_slots = sem_open("/filled_slots", O_CREAT, 0666, 0);
+		mutex = sem_open("/mutex", O_CREAT, 0666, 1);
+		*/
 		if (pid==0)
 		{
 			/* producer */
 			read_dico("dico.txt", buffer, 0);
-			printf("will wait");
+			printf("will wait children");
 			wait(&status);
-			printf("done waiting");
+			printf("done waiting children");
 		}
 		else
 		{
@@ -197,6 +251,8 @@ main (int argc, char const * argv[])
 	}
 	else
 	{
+		found = malloc(sizeof(int));
+		*found = 0;
 		/* initialise semaphores shared by threads */
 		/* number of free slots */
 		free_slots = malloc(sizeof(sem_t *));
@@ -232,7 +288,7 @@ main (int argc, char const * argv[])
         return 1;
     }
 
-    printf("Password found. %i\n", found);
+    printf("Password found. %i\n", *found);
 
     zip_close_archive(archive);
     return 0;
