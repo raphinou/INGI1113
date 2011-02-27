@@ -9,7 +9,7 @@ typedef struct bnd_buf bnd_buf;
  * Creates and returns a bounded buffer of size size
  */
 bnd_buf *
-bnd_buf_alloc(int size);
+bnd_buf_alloc(int size, int shared);
 
 /*
  * Frees the memory used by a buffer 
