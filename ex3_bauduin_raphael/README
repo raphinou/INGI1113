@@ -1,7 +1,1 @@
-Questions:
-
-
-- why do I  
-- is there a way to get the info shmid to pass to shmctl from the memory address or do I need to put it in a variable?
-- why do I need to run as root when calling shmget with IPC_PRIVATE ?
-
+- shared memory is not detached correctly. 

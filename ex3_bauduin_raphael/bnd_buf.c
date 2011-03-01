@@ -54,7 +54,7 @@ bnd_buf_alloc(int size, int shared)
 		 * This works though with IPC_PRIVATE, but need to be run as root (???)
 		shmid=shmget(SHM_BUF_ARRAY_ID, size*sizeof(char *), IPC_CREAT);
 		 */ 
-		shmid=shmget(IPC_PRIVATE, size*sizeof(char *), IPC_CREAT);
+		shmid=shmget(IPC_PRIVATE, size*sizeof(char *), 0777|IPC_CREAT);
 		if (shmid==-1)
 		{
 			printf("ERROR on shmid BND_BUF_ARRAY: %s\n", strerror(errno));
@@ -66,7 +66,7 @@ bnd_buf_alloc(int size, int shared)
 		buffer->array = shm_array;
 		for (i=0; i<size; i++) 
 		{
-			shmid = shmget(IPC_PRIVATE, (50*sizeof(char)), IPC_CREAT);
+			shmid = shmget(IPC_PRIVATE, (50*sizeof(char)), 0777|IPC_CREAT);
 			if (shmid==-1)
 			{
 				printf("ERROR on shmid array element");
